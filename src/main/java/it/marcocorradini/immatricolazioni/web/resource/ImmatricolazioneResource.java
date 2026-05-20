@@ -5,10 +5,7 @@ import it.marcocorradini.immatricolazioni.persistence.repository.Immatricolazion
 import it.marcocorradini.immatricolazioni.web.model.ImmatricolazioneModel;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -18,6 +15,18 @@ import jakarta.ws.rs.core.Response;
 public class ImmatricolazioneResource {
     @Inject
     ImmatricolazioneRepository repository;
+
+    private void updateEntity(ImmatricolazioneEntity e, ImmatricolazioneModel m) {
+        e.targa = m.targa;
+        e.numeroTelaio = m.numeroTelaio;
+        e.dataImmatricolazione = m.dataImmatricolazione;
+        e.comuneImmatricolazione = m.comuneImmatricolazione;
+        e.codiceFiscaleProprietario = m.codiceFiscaleProprietario;
+        e.partitaIvaProprietario = m.partitaIvaProprietario;
+        e.classeVeicolo = m.classeVeicolo;
+        e.scadenzaRevisione = m.scadenzaRevisione;
+        e.radiato = m.radiato != null ? m.radiato : false;
+    }
 
     @POST
     @Transactional
@@ -72,25 +81,69 @@ public class ImmatricolazioneResource {
                     .entity("Telaio già esistente")
                     .build();
         }
-
         ImmatricolazioneEntity entity=new ImmatricolazioneEntity();
-        entity.targa=model.targa;
-        entity.numeroTelaio=model.numeroTelaio;
-        entity.dataImmatricolazione=model.dataImmatricolazione;
-        entity.comuneImmatricolazione=model.comuneImmatricolazione;
-        entity.codiceFiscaleProprietario=model.codiceFiscaleProprietario;
-        entity.partitaIvaProprietario=model.partitaIvaProprietario;
-        entity.classeVeicolo=model.classeVeicolo;
-        entity.scadenzaRevisione=model.scadenzaRevisione;
-        entity.radiato=model.radiato!=null?model.radiato:false;
-
+        updateEntity(entity, model);
         repository.persist(entity);
         model.id=entity.id;
-
         return Response.status(Response.Status.CREATED)
                 .entity(model)
                 .build();
     }
 
+    @GET
+    public Response getAll(){
+        return Response.ok(
+                repository.list("eliminato=false")
+        ).build();
+    }
 
+    @GET // By id
+    @Path("/{id}")
+    public Response getById(@PathParam("id") Long id){
+        ImmatricolazioneEntity entity=repository.findById(id);
+        if (entity==null||Boolean.TRUE.equals(entity.eliminato)){
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Immatricolazione non trovata")
+                    .build();
+        }
+        return Response.ok(entity).build();
+    }
+
+    @DELETE
+    @Path("/{id}")
+    @Transactional
+    public Response deleteById(@PathParam("id") Long id){
+        ImmatricolazioneEntity entity=repository.findById(id);
+        if (entity==null||Boolean.TRUE.equals(entity.eliminato)){
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Immatricolazione non trovata")
+                    .build();
+        }
+        entity.eliminato=true;
+        return Response.noContent().build();
+    }
+
+    @PUT
+    @Path("/{id}")
+    @Transactional
+    public Response updateById(@PathParam("id") Long id, ImmatricolazioneModel model){
+        ImmatricolazioneEntity entity=repository.findById(id);
+        if (entity==null||Boolean.TRUE.equals(entity.eliminato)){
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Immatricolazione non trovata")
+                    .build();
+        }
+        if (!entity.targa.equals(model.targa) && repository.find("targa", model.targa).firstResult()!=null){
+            return Response.status(Response.Status.CONFLICT)
+                    .entity("Targa già esistente")
+                    .build();
+        }
+        if (!entity.getNumeroTelaio().equals(model.numeroTelaio) && repository.find("numeroTelaio", model.numeroTelaio).firstResult()!=null){
+            return Response.status(Response.Status.CONFLICT)
+                    .entity("Telaio già esistente")
+                    .build();
+        }
+        updateEntity(entity, model);
+        return Response.ok(entity).build();
+    }
 }

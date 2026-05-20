@@ -146,4 +146,47 @@ public class ImmatricolazioneResource {
         updateEntity(entity, model);
         return Response.ok(entity).build();
     }
+
+    @GET
+    @Path("/search")
+    public Response search(
+            @QueryParam("targa") String targa,
+            @QueryParam("owner") String owner
+    ){
+        // Ricerca targa
+        if (targa!=null&&!targa.isBlank()){
+            return Response.ok(
+                    repository.list(
+                            "targa like ?1 and eliminato = false",
+                            "%"+targa+"%"
+                    )
+            ).build();
+        }
+        // Ricerca proprietario
+        if (owner!=null&&!owner.isBlank()){
+            return Response.ok(
+                    repository.list(
+                            "(codiceFiscaleProprietario like ?1"+
+                                    "or partitaIvaProprietario like ?1)"+
+                                    "and eliminato = false",
+                            "%"+owner+"%"
+                    )
+            ).build();
+        }
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity("Specificare targa o owner")
+                .build();
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+

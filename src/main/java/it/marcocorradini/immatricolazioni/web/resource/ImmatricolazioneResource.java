@@ -3,6 +3,7 @@ package it.marcocorradini.immatricolazioni.web.resource;
 import it.marcocorradini.immatricolazioni.persistence.entity.ImmatricolazioneEntity;
 import it.marcocorradini.immatricolazioni.persistence.repository.ImmatricolazioneRepository;
 import it.marcocorradini.immatricolazioni.web.model.ImmatricolazioneModel;
+import it.marcocorradini.immatricolazioni.web.request.RevisioneRequest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -176,6 +177,25 @@ public class ImmatricolazioneResource {
         return Response.status(Response.Status.BAD_REQUEST)
                 .entity("Specificare targa o owner")
                 .build();
+    }
+
+    @PATCH
+    @Path("/{id}/revisione")
+    @Transactional
+    public Response rinnovaRevisione(@PathParam("id") Long id, RevisioneRequest request){
+        ImmatricolazioneEntity entity=repository.findById(id);
+        if (entity==null||Boolean.TRUE.equals(entity.eliminato)){
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Immatricolazione non trovata")
+                    .build();
+        }
+        if (request.scadenzaRevisione==null){
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Scadenza revisione obbligatoria")
+                    .build();
+        }
+        entity.scadenzaRevisione=request.scadenzaRevisione;
+        return Response.ok(entity).build();
     }
 }
 
